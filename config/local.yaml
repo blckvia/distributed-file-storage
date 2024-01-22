@@ -1,0 +1,5 @@
+env: "local"
+storage_path: "./storage/distributedStorage.db"
+grpc:
+  port: 50051
+  timeout: 10h
