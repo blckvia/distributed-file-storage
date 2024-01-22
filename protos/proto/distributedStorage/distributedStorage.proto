@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package distributedStorage;
+
+option go_package = "blckvia.distributedStorage.v1;distributedStoragev1";
+
+service DistributedStorage {
+  rpc Get(GetRequest) returns (GetResponse);
+  rpc Post(PostRequest) returns (PostResponse);
+}
+
+message GetRequest {
+  string filename = 1;
+  string mimeType = 2;
+}
+
+message GetResponse {
+  bytes data = 1;
+}
+
+message PostRequest {
+  string filename = 1;
+  string mimeType = 2;
+  bytes data = 3;
+}
+
+message PostResponse {
+  bool success = 1;
+}
