@@ -5,25 +5,23 @@ package distributedStorage;
 option go_package = "blckvia.distributedStorage.v1;distributedStoragev1";
 
 service DistributedStorage {
-  rpc Get(GetRequest) returns (GetResponse);
-  rpc Post(PostRequest) returns (PostResponse);
+  rpc Getfile(GetfileRequest) returns (GetfileResponse);
+  rpc Upload(stream UploadRequest) returns (UploadResponse);
 }
 
-message GetRequest {
+message GetfileRequest {
   string filename = 1;
-  string mimeType = 2;
 }
 
-message GetResponse {
+message GetfileResponse {
   bytes data = 1;
 }
 
-message PostRequest {
+message UploadRequest {
   string filename = 1;
-  string mimeType = 2;
-  bytes data = 3;
+  bytes data = 2;
 }
 
-message PostResponse {
+message UploadResponse {
   bool success = 1;
 }
