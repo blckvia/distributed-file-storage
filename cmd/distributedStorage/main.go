@@ -1,6 +1,7 @@
 package main
 
 import (
+	"distributed-file-storage/internal/app"
 	"distributed-file-storage/internal/config"
 	"distributed-file-storage/internal/lib/logger/handlers/slogpretty"
 	"log/slog"
@@ -14,11 +15,16 @@ const (
 )
 
 func main() {
+
 	cfg := config.MustLoad()
 
 	log := setupLogger(cfg.Env)
 
 	log.Info("Starting server", slog.Any("config", cfg))
+
+	application := app.New(log, cfg.GRPC.Port, cfg.StoragePath)
+
+	application.GRPCSrv.MustRun()
 }
 
 func setupLogger(env string) *slog.Logger {
