@@ -6,6 +6,8 @@ import (
 	"distributed-file-storage/internal/lib/logger/handlers/slogpretty"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 const (
@@ -24,7 +26,19 @@ func main() {
 
 	application := app.New(log, cfg.GRPC.Port, cfg.StoragePath)
 
-	application.GRPCSrv.MustRun()
+	go application.GRPCSrv.MustRun()
+
+	// Graceful shutdown
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
+
+	sysSignal := <-stop
+
+	log.Info("stopping application", slog.String("signal", sysSignal.String()))
+
+	application.GRPCSrv.Stop()
+
+	log.Info("application stopped")
 }
 
 func setupLogger(env string) *slog.Logger {
