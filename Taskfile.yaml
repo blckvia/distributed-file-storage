@@ -9,3 +9,17 @@ tasks:
     desc: "Generate code from proto files"
     cmds:
       - protoc -I protos/proto/distributedStorage protos/proto/distributedStorage/*.proto --go_out=./protos/gen/go/distributedStorage --go_opt=paths=source_relative --go-grpc_out=./protos/gen/go/distributedStorage --go-grpc_opt=paths=source_relative
+
+  lint:
+    aliases:
+      - lint
+    desc: "Lint code"
+    cmds:
+      - golangci-lint run ./...  -c .golangci-lint.yml
+
+  migrate:
+    aliases:
+      - migrate
+    desc: "Migrate database"
+    cmds:
+      - go run ./cmd/migrator --storage-path=./storage/meta.db --migrations-path=./migrations
