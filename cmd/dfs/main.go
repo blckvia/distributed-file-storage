@@ -1,13 +1,14 @@
 package main
 
 import (
-	"distributed-file-storage/internal/app"
-	"distributed-file-storage/internal/config"
-	"distributed-file-storage/internal/lib/logger/handlers/slogpretty"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"distributed-file-storage/internal/app"
+	"distributed-file-storage/internal/config"
+	"distributed-file-storage/internal/lib/logger/handlers/slogpretty"
 )
 
 const (

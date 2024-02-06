@@ -4,7 +4,10 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+
 	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 func main() {
@@ -25,8 +28,7 @@ func main() {
 
 	m, err := migrate.New(
 		"file://"+migrationsPath,
-		// TODO: adapt to postgresql
-		fmt.Sprintf("posgresql://%s?x-migrations-table=%s", storagePath, migrationsTable))
+		fmt.Sprintf("postgres://%s?x-migrations-table=%s", storagePath, migrationsTable))
 
 	if err != nil {
 		panic(err)

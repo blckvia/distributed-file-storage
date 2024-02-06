@@ -2,8 +2,9 @@ package gateway
 
 import (
 	"context"
-	"distributed-file-storage/internal/domain/models"
 	"log/slog"
+
+	"distributed-file-storage/internal/domain/models"
 )
 
 type Gateway struct {
@@ -14,7 +15,7 @@ type Gateway struct {
 }
 
 type FileUploader interface {
-	UploadFile(ctx context.Context, filename string, mime_type string, blob []byte) error
+	UploadFile(ctx context.Context, filename string, mimeType string, blob []byte) error
 }
 
 type FileGetter interface {
@@ -28,20 +29,20 @@ type AppProvider interface {
 // New returns a new instance of the Gateway service.
 func New(
 	log *slog.Logger,
-	FileUploader FileUploader,
-	FileGetter FileGetter,
-	AppProvider AppProvider,
+	fileUploader FileUploader,
+	fileGetter FileGetter,
+	appProvider AppProvider,
 ) *Gateway {
 	return &Gateway{
 		log:         log,
-		fUploader:   FileUploader,
-		fGetter:     FileGetter,
-		appProvider: AppProvider,
+		fUploader:   fileUploader,
+		fGetter:     fileGetter,
+		appProvider: appProvider,
 	}
 }
 
 // UploadFile uploads a file to the storage.
-func (g *Gateway) UploadFile(ctx context.Context, filename string, mime_type string, blob []byte) error {
+func (g *Gateway) UploadFile(ctx context.Context, filename, mime_type string, blob []byte) error {
 	panic("Not implemented")
 }
 

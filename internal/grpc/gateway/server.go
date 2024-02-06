@@ -2,10 +2,12 @@ package gateway
 
 import (
 	"context"
-	distributedStoragev1 "distributed-file-storage/protos/gen/go/distributedStorage"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	distributedStoragev1 "distributed-file-storage/protos/gen/go/distributedStorage"
 )
 
 type Gateway interface {
