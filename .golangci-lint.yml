@@ -13,6 +13,8 @@ linters-settings:
   funlen:
     lines: -1 # the number of lines (code + empty lines) is not a right metric and leads to code without empty line or one-liner.
     statements: 50
+  structcheck:
+    field_name_style: camelCase
   goconst:
     min-len: 2
     min-occurrences: 3
