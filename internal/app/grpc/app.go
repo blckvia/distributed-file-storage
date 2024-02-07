@@ -1,11 +1,13 @@
 package grpcapp
 
 import (
-	gatewaygrpc "distributed-file-storage/internal/grpc/gateway"
 	"fmt"
-	"google.golang.org/grpc"
 	"log/slog"
 	"net"
+
+	"google.golang.org/grpc"
+
+	gatewaygrpc "distributed-file-storage/internal/grpc/gateway"
 )
 
 type App struct {
@@ -16,11 +18,11 @@ type App struct {
 
 func New(
 	log *slog.Logger,
+	gatewayService gatewaygrpc.Gateway,
 	port int,
 ) *App {
 	gRPCServer := grpc.NewServer()
-
-	gatewaygrpc.Register(gRPCServer)
+	gatewaygrpc.Register(gRPCServer, gatewayService)
 
 	return &App{
 		log:        log,

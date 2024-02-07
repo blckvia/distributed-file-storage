@@ -1,5 +1,5 @@
 env: "local"
-storage_path: "./storage/distributedStorage.db"
+storage_path: "./storage/dfs.db"
 grpc:
   port: 50051
   timeout: 10h

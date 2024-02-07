@@ -1,8 +1,8 @@
 package models
 
 type Meta struct {
-	ID                   int64
-	Name                 string
-	mime_type            string
-	blob_sequence_number []byte
+	ID                 int64
+	Filename           string
+	MimeType           string
+	BlobSequenceNumber []byte
 }

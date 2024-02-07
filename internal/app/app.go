@@ -1,8 +1,9 @@
 package app
 
 import (
-	grpcapp "distributed-file-storage/internal/app/grpc"
 	"log/slog"
+
+	grpcapp "distributed-file-storage/internal/app/grpc"
 )
 
 type App struct {
