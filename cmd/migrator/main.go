@@ -1,48 +1,66 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
+	"os"
+	"os/exec"
+	"strings"
 
-	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	var storagePath, migrationsPath, migrationsTable string
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println("Error loading .env file")
+	}
 
-	flag.StringVar(&storagePath, "storage-path", "", "path to storage")
+	var migrationsPath string
+	var up, down bool
+
+	userName := os.Getenv("USER_NAME")
+	password := os.Getenv("PASSWORD")
+	host := os.Getenv("HOST")
+	port := os.Getenv("PORT")
+	dbName := os.Getenv("DB_NAME")
+
+	storagePath := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s", userName, password, host, port, dbName)
+
+	flag.StringVar(&storagePath, "storage-path", "", "database connection URL")
 	flag.StringVar(&migrationsPath, "migrations-path", "", "path to migrations")
-	flag.StringVar(&migrationsTable, "migrations-table", "migrations", "name of migrations table")
+	flag.BoolVar(&up, "up", false, "apply all pending migrations")
+	flag.BoolVar(&down, "down", false, "revert the last applied migration")
 	flag.Parse()
 
-	if storagePath == "" {
-		panic("storage-path is required")
+	if storagePath == "postgres://:@:/" || migrationsPath == "" {
+		fmt.Println("storage-path and migrations-path are required")
+		os.Exit(1)
 	}
 
-	if migrationsPath == "" {
-		panic("migrations-path is required")
+	// Set environment variables for dbmate
+	os.Setenv("DATABASE_URL", storagePath)
+	os.Setenv("DBMATE_DIR", migrationsPath)
+
+	// Construct the dbmate command based on the flags
+	var dbmateCommand *exec.Cmd
+	if up {
+		dbmateCommand = exec.Command("dbmate", "up")
+	} else if down {
+		dbmateCommand = exec.Command("dbmate", "down")
+	} else {
+		fmt.Println("Please specify either -up or -down to apply or revert migrations.")
+		os.Exit(1)
 	}
 
-	m, err := migrate.New(
-		"file://"+migrationsPath,
-		fmt.Sprintf("postgres://%s?x-migrations-table=%s", storagePath, migrationsTable))
-
+	// Run the dbmate command
+	m, err := dbmateCommand.CombinedOutput()
 	if err != nil {
-		panic(err)
+		fmt.Printf("dbmate failed: %s\n", err)
+		fmt.Printf("Output: %s\n", strings.TrimSpace(string(m)))
+		os.Exit(1)
 	}
 
-	if err := m.Up(); err != nil {
-		if errors.Is(err, migrate.ErrNoChange) {
-			fmt.Println("no migrations to apply")
-
-			return
-		}
-
-		panic(err)
-	}
-
-	fmt.Println("migrations applied successfully")
+	fmt.Println("dbmate operation successful")
+	fmt.Println(strings.TrimSpace(string(m)))
 }

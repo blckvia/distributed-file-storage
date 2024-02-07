@@ -17,9 +17,16 @@ tasks:
     cmds:
       - golangci-lint run ./...  -c .golangci-lint.yml
 
-  migrate:
+  migrate-up:
     aliases:
-      - migrate
-    desc: "Migrate database"
+      - migrate up
+    desc: "Migrate database up"
     cmds:
-      - go run ./cmd/migrator --storage-path=./storage/meta.db --migrations-path=./migrations
+      - go run ./cmd/migrator --migrations-path=./migrations -up
+
+  migrate-down:
+    aliases:
+      - migrate down
+    desc: "Migrate database down"
+    cmds:
+      - go run ./cmd/migrator --migrations-path=./migrations -down
