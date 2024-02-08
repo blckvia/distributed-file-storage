@@ -1,7 +1,9 @@
 --migrate:up
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE TABLE IF NOT EXISTS meta
 (
-    id UUID PRIMARY KEY AUTOINCREMENT,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     filename TEXT NOT NULL UNIQUE,
     blob_sequence TEXT NOT NULL,
     mime_type TEXT NOT NULL

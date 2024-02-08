@@ -17,12 +17,18 @@ tasks:
     cmds:
       - golangci-lint run ./...  -c .golangci-lint.yml
 
+  migrate-new:
+    desc: Create a new migration file
+    cmds:
+      - source .env && dbmate -u "$DBMATE_DATABASE_URL" create
+      - dbmate new meta
+
   migrate-up:
     aliases:
       - migrate up
     desc: "Migrate database up"
     cmds:
-      - go run ./cmd/migrator --migrations-path=./migrations -up
+      - source .env && dbmate --url "$DBMATE_DATABASE_URL" up
 
   migrate-down:
     aliases:
