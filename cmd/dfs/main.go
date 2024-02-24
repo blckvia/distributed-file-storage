@@ -8,7 +8,7 @@ import (
 
 	"distributed-file-storage/internal/app"
 	"distributed-file-storage/internal/config"
-	"distributed-file-storage/internal/lib/logger/handlers/slogpretty"
+	"distributed-file-storage/pkg/lib/logger/handlers/slogpretty"
 )
 
 const (

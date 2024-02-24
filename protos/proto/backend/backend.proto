@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package backend;
+
+option go_package = "blckvia.backend.v1;backendv1";
+
+service Backend {
+  rpc GetBlob(GetBlobRequest) returns (GetBlobResponse);
+  rpc Upload(UploadRequest) returns (UploadResponse);
+}
+
+message GetBlobRequest {
+  string filename = 1;
+}
+
+message GetBlobResponse {
+  uint32 sequenceNumber = 1;
+  bytes data = 2;
+}
+
+message UploadRequest {
+  int64 filename = 1;
+  uint32 sequenceNumber = 2;
+  bytes data = 3;
+}
+
+message UploadResponse {
+  bool success = 1;
+}
