@@ -2,15 +2,15 @@ package gateway
 
 import (
 	"context"
+	"distributed-file-storage/internal/domain/models"
+	distributedStoragev1 "distributed-file-storage/protos/gen/go/distributedStorage"
 	"errors"
+	"github.com/docker/docker/api/server/router/grpc"
 	"io"
 	"log"
 	"log/slog"
 	"net/http"
-	"sync"
-
-	"distributed-file-storage/internal/domain/models"
-	distributedStoragev1 "distributed-file-storage/protos/gen/go/distributedStorage"
+	"os"
 )
 
 type Gateway struct {
@@ -32,47 +32,58 @@ type ChunkInfo struct {
 	Mimetype string
 }
 
+// 10mb ->
+
 func (g *Gateway) Upload(stream distributedStoragev1.DistributedStorage_UploadServer) error {
-	var wg sync.WaitGroup
 	chunkCh := make(chan []byte)
 
-	wg.Add(1)
-	go func() {
-		defer close(chunkCh)
-		defer wg.Done()
-		var buffer []byte
-		var mimeType string
-		var mimeTypeDetected = false
-		var filename string
-		var chunkIndex int
+	var buffer []byte
+	var mimeType string
+	var mimeTypeDetected = false
+	var filename string
+	var chunkIndex int
 
-		for {
+	for {
+		var partData []byte
+		chunkIndex = 0
+		var tmp []byte
+		if len(partData) < ChunkSize {
 			data, err := stream.Recv()
 			if errors.Is(err, io.EOF) {
 				break
 			}
 			if err != nil {
 				log.Println("failed to receive data:", err)
-				return
+				break //
 			}
-
-			if filename == "" {
-				filename = data.GetFilename()
-			}
-
-			if !mimeTypeDetected && len(buffer) >= 512 {
-				mimeType = http.DetectContentType(buffer[:512])
-				mimeTypeDetected = true
-			}
-
-			buffer = append(buffer, data.Data...)
-			if len(buffer) >= ChunkSize {
-				chunkCh <- ChunkInfo{Data: buffer[:ChunkSize], Index: chunkIndex, Filename: filename, Mimetype: mimeType}
-				buffer = buffer[ChunkSize:]
-				chunkIndex++
-			}
+			tmp = data.Data
+			tmp = partData + data.Data[:ChunkSize - len([partData])]
+		} else {
+			tmp = partData
 		}
-	}()
+		ctx := stream.Context()
+
+		if filename == "" {
+			filename = data.GetFilename()
+		}
+
+		buffer = tmp[:ChunkSize]
+		if len(tmp) > ChunkSize {
+			// тут подумать тут правильно разделить
+			partData = tmp[ChunkSize+1:] // 0x11, 0x13, 0x13 0 0 0 0 0 0
+		} else if len(tmp) <= ChunkSize {
+			partData = make([]byte, 0, ChunkSize)
+		}
+
+		if chunkIndex == 0 && len(buffer) >= 512 {
+			mimeType = http.DetectContentType(buffer[:512])
+		}
+
+		if err := g.fUploader.UploadFile(ctx, filename, mimeType, buffer); err != nil {
+			return err
+		}
+		chunkIndex++
+	}
 
 	return nil
 }
@@ -105,11 +116,23 @@ func New(
 }
 
 // UploadFile uploads a file to the storage.
-func (g *Gateway) UploadFile(ctx context.Context, filename, mimeType string, blob []byte) error { //nolint
-	panic("Not implemented")
+func (g *Gateway) UploadFile(ctx context.Context, filename, mimeType string, chunkindex uint, blob []byte) error { //nolint
+	if chunkindex == 0 {
+		db.SaveMeta(ctx, filename, mimtype)
+	}
+	backend := grpc.Backend()
+	backend.Upload(ctx, blob)
+	db.SaveMeta(ctx, chunkindex, backend.ID)
 }
 
 // GetFile downloads a file from the storage.
 func (g *Gateway) GetFile(ctx context.Context, filename string) ([]byte, error) { //nolint
 	panic("Not implemented")
+}
+
+
+// UploadFile gtpc file backend
+func (g *Gateway) UploadBlob(ctx context.Context, grcpClient) error { //nolint
+	data := call.GetData()
+	os.WriteFile("tmp-chunck-ID=jncdsnkdcns", data)
 }
