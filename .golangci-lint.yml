@@ -144,6 +144,7 @@ issues:
       linters:
         - golint
         - gocritic
+        - unused
     - path: pkg/lib/logger/handlers/slogpretty/
       linters:
         - golint
