@@ -2,15 +2,17 @@ package gateway
 
 import (
 	"context"
-	"distributed-file-storage/internal/domain/models"
-	distributedStoragev1 "distributed-file-storage/protos/gen/go/distributedStorage"
 	"errors"
-	"github.com/docker/docker/api/server/router/grpc"
+	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"net/http"
-	"os"
+
+	"distributed-file-storage/internal/domain/models"
+	"distributed-file-storage/internal/services/backend"
+	distributedStoragev1 "distributed-file-storage/protos/gen/go/distributedStorage"
+
+	db "distributed-file-storage/internal/storage/postgres"
 )
 
 type Gateway struct {
@@ -18,75 +20,14 @@ type Gateway struct {
 	fUploader   FileUploader
 	fGetter     FileGetter
 	appProvider AppProvider
+	storage     *db.Storage
+	backend     *backend.Backend
 }
 
 const (
 	// ChunkSize is the size of the chunk.
 	ChunkSize = 1 << 26
 )
-
-type ChunkInfo struct {
-	Data     []byte
-	Index    int
-	Filename string
-	Mimetype string
-}
-
-// 10mb ->
-
-func (g *Gateway) Upload(stream distributedStoragev1.DistributedStorage_UploadServer) error {
-	chunkCh := make(chan []byte)
-
-	var buffer []byte
-	var mimeType string
-	var mimeTypeDetected = false
-	var filename string
-	var chunkIndex int
-
-	for {
-		var partData []byte
-		chunkIndex = 0
-		var tmp []byte
-		if len(partData) < ChunkSize {
-			data, err := stream.Recv()
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			if err != nil {
-				log.Println("failed to receive data:", err)
-				break //
-			}
-			tmp = data.Data
-			tmp = partData + data.Data[:ChunkSize - len([partData])]
-		} else {
-			tmp = partData
-		}
-		ctx := stream.Context()
-
-		if filename == "" {
-			filename = data.GetFilename()
-		}
-
-		buffer = tmp[:ChunkSize]
-		if len(tmp) > ChunkSize {
-			// тут подумать тут правильно разделить
-			partData = tmp[ChunkSize+1:] // 0x11, 0x13, 0x13 0 0 0 0 0 0
-		} else if len(tmp) <= ChunkSize {
-			partData = make([]byte, 0, ChunkSize)
-		}
-
-		if chunkIndex == 0 && len(buffer) >= 512 {
-			mimeType = http.DetectContentType(buffer[:512])
-		}
-
-		if err := g.fUploader.UploadFile(ctx, filename, mimeType, buffer); err != nil {
-			return err
-		}
-		chunkIndex++
-	}
-
-	return nil
-}
 
 type FileUploader interface {
 	UploadFile(ctx context.Context, filename string, mimeType string, blob []byte) error
@@ -106,33 +47,95 @@ func New(
 	fileUploader FileUploader,
 	fileGetter FileGetter,
 	appProvider AppProvider,
+	storage *db.Storage,
+	backendService *backend.Backend,
 ) *Gateway {
 	return &Gateway{
 		log:         log,
 		fUploader:   fileUploader,
 		fGetter:     fileGetter,
 		appProvider: appProvider,
+		storage:     storage,
+		backend:     backendService,
 	}
+}
+
+func (g *Gateway) Upload(stream distributedStoragev1.DistributedStorage_UploadServer) error {
+	var chunkIndex uint
+	var buffer []byte
+	var mimeType string
+	var mimeTypeDetected bool
+	var filename string
+	ctx := stream.Context()
+
+	for {
+		// Receive data from stream
+		data, err := stream.Recv()
+		if errors.Is(err, io.EOF) {
+			// Handle the last chunk
+			if len(buffer) > 0 {
+				if uploadErr := g.UploadFile(ctx, filename, mimeType, chunkIndex, buffer); uploadErr != nil {
+					return fmt.Errorf("error downloading last chunk %w", uploadErr)
+				}
+			}
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("failed to receive data: %w", err)
+		}
+
+		// Initialize filename and mimeType on the first chunk
+		if filename == "" {
+			filename = data.GetFilename() // Assuming your message has a GetFilename method
+			chunkIndex = 0
+		}
+
+		// Append received data to the buffer
+		buffer = append(buffer, data.Data...)
+
+		// Process full chunks
+		for len(buffer) >= ChunkSize {
+			currentChunk := buffer[:ChunkSize]
+			buffer = buffer[ChunkSize:]
+
+			if !mimeTypeDetected {
+				mimeType = http.DetectContentType(currentChunk[:512])
+				mimeTypeDetected = true
+			}
+
+			// Process the current chunk
+			if err := g.UploadFile(ctx, filename, mimeType, chunkIndex, currentChunk); err != nil {
+				return fmt.Errorf("error uploading chunk %d: %w", chunkIndex, err)
+			}
+			chunkIndex++
+		}
+	}
+
+	return nil
 }
 
 // UploadFile uploads a file to the storage.
-func (g *Gateway) UploadFile(ctx context.Context, filename, mimeType string, chunkindex uint, blob []byte) error { //nolint
-	if chunkindex == 0 {
-		db.SaveMeta(ctx, filename, mimtype)
+func (g *Gateway) UploadFile(ctx context.Context, filename, mimeType string, chunkIndex uint, blob []byte) error {
+	var metaID int64
+	var err error
+
+	// TODO: must be rewritten. Not optimal, if something goes wrong we will have info in meta but dont have the blob in backend.
+	if chunkIndex == 0 {
+		metaID, err = g.storage.SaveMeta(ctx, filename, mimeType)
+		if err != nil {
+			return fmt.Errorf("failed to save metadata: %w", err)
+		}
 	}
-	backend := grpc.Backend()
-	backend.Upload(ctx, blob)
-	db.SaveMeta(ctx, chunkindex, backend.ID)
+
+	if err := g.backend.Upload(ctx, blob, chunkIndex, metaID); err != nil {
+		return fmt.Errorf("failed to upload blob: %w", err)
+	}
+
+	return nil
 }
 
 // GetFile downloads a file from the storage.
-func (g *Gateway) GetFile(ctx context.Context, filename string) ([]byte, error) { //nolint
+func (g *Gateway) GetFile(ctx context.Context, filename string) ([]byte, error) {
+	fmt.Println(ctx, filename)
 	panic("Not implemented")
-}
-
-
-// UploadFile gtpc file backend
-func (g *Gateway) UploadBlob(ctx context.Context, grcpClient) error { //nolint
-	data := call.GetData()
-	os.WriteFile("tmp-chunck-ID=jncdsnkdcns", data)
 }
