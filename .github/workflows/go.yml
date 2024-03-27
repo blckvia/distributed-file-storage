@@ -11,10 +11,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v4
         with:
           version: latest
-      - name: Save state
-        run: echo "{name}={value}" >> $GITHUB_STATE
-      - name: Set output
-        run: echo "{name}={value}" >> $GITHUB_OUTPUT
