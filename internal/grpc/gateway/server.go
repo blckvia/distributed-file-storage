@@ -13,11 +13,10 @@ import (
 type Gateway interface {
 	GetFile(ctx context.Context, filename string) ([]byte, error)
 	Upload(stream distributedStoragev1.DistributedStorage_UploadServer) error
-	mustEmbedUnimplementedDistributedStorageServer()
 }
 
 type ServerAPI struct {
-	distributedStoragev1.UnimplementedDistributedStorageServer
+	distributedStoragev1.DistributedStorageServer
 	gateway Gateway
 }
 
@@ -41,10 +40,6 @@ func (s *ServerAPI) GetFile(ctx context.Context, req *distributedStoragev1.Getfi
 	}, nil
 }
 
-func (s *ServerAPI) Upload(stream distributedStoragev1.DistributedStorage_UploadServer) error {
-	panic("Not implemented")
-}
-
-func (s *ServerAPI) mustEmbedUnimplementedDistributedStorageServer() {
+func (s *ServerAPI) Upload(stream distributedStoragev1.DistributedStorage_UploadServer) error { //nolint
 	panic("Not implemented")
 }
