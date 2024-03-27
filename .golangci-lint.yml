@@ -117,7 +117,7 @@ linters:
     - whitespace
   exclude:
     - pkg/lib/logger/handlers/slogdiscard/slogdiscard.go
-      - pkg/lib/logger/handlers/slogpretty/slogpretty.go
+    - pkg/lib/logger/handlers/slogpretty/slogpretty.go
 
   # don't enable:
   # - asciicheck
@@ -142,15 +142,15 @@ issues:
         - gomnd
     - path: pkg/lib/logger/handlers/slogdiscard/
       linters:
+        - unused
         - golint
         - gocritic
-        - unused
     - path: pkg/lib/logger/handlers/slogpretty/
       linters:
+        - unused
         - golint
         - gocritic
         - gofmt
-        - unused
     - path: pkg/golinters/errcheck.go
       text: "SA1019: errCfg.Exclude is deprecated: use ExcludeFunctions instead"
     - path: pkg/commands/run.go
